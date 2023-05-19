@@ -1,0 +1,68 @@
+/*Este desafio passou por atualizações recentes na versão em inglês, seguem algumas dicas para solucionar corretamente algumas novidades nas tarefas:*/
+//Tarefa 1
+
+//Após criar o Dataset do Bigquery, deve-se criar neste Dataset a Tabela nomeada no fim do caminho descrito no campo “Bigquery Output Table”.
+//Ex: qwiklabs-gcp-03-e754070b5f31:lab_359.customers_821 (neste exemplo a tabela a ser criada no Dataset deve chamar-se “customers_821”)
+
+//Tarefa 2
+
+//Caso a criação do Cluster do Dataproc não funcione pelo console, tentar por linha de comando:
+gcloud config set dataproc/region <sua região>
+gcloud dataproc clusters create example-cluster --worker-boot-disk-size 500
+
+//Tarefa 3
+
+//3.1 – Entrar em IAM – Procura o Usuário de Compute Engine, clique no lápis a direita para editar e adicionar uma role para o Cloud Storage>Storage Admin. Após isso clique em Save.
+//3.2 - Criar uma chave de API para usar na chamada do Cloud Speech
+//3.3 - Fazer login SSH na máquina provisionada pela atividade
+//3.3.1 - Exportar a chave de API copiada anteriormente para uma variável de ambiente, conforme abaixo:
+export API_KEY=**MINHA_CHAVE_DE_API_CRIADA**
+
+//3.3.2 - Crie um arquivo request.jsonna linha de comando SSH. Ele será usado para criar sua solicitação à API Speech:
+touch request.json
+
+//3.3.3 - Abrir o arquivo usando o nano conforme o comando abaixo:
+sudo nano request.json
+
+//3.3.4 - Colar o seguinte conteúdo no arquivo request.json. Para salvar o arquivo aperte CTRL+O >ENTER e para fechar aperte CTRL+X:
+
+{
+
+"config": {
+
+"encoding":"FLAC",
+
+"languageCode": "en-US"
+
+},
+
+"audio": {
+
+"uri":"gs://cloud-training/gsp323/task3.flac"
+
+}
+
+}
+
+
+//3.3.5 - Faça a chamada da API com o seguinte comando no shell do Linux:
+
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json \[https://speech.googleapis.com/v1/speech:recognize?key=${API_KEY}](https://speech.googleapis.com/v1/speech:recognize?key=$%7bAPI_KEY%7d)
+
+//3.3.6- Execute o comando novamente, agora salvando o conteúdo no arquivo result.json:
+
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json \"https://speech.googleapis.com/v1/speech:recognize?key=${API_KEY}" > result.json
+
+//3.3.7 - Agora copie o conteúdo de result.json para o bucket fornecido pela atividade, no meu caso foi: **gs://qwiklabs-gcp-01-47effadfda7c-marking/task4-gcs-571.result,** troque para o seu, e execute no shell da VM:
+
+gsutil cp result.json gs://qwiklabs-gcp-02-a9caed97d5ff-marking/task3-gcs-457.result
+
+//Tarefa 4
+
+//4.1 – Ainda no SSH da VM fornecida pelo lab, rode o chamado para a API Natural Language com o texto fornecido no seu lab:
+
+gcloud ml language analyze-entities --content="Old Norse texts portray Odin as one-eyed and long-bearded, frequently wielding a spear named Gungnir and wearing a cloak and a broad hat." > result.json
+
+//4.2 – Copie o resultado para o Bucket:
+
+gsutil cp result.json gs://qwiklabs-gcp-02-a9caed97d5ff-marking/task4-cnl-255.result
