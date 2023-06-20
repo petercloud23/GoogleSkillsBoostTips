@@ -1,4 +1,6 @@
-export LANGUAGE=[copiar do left_panel] export LOCAL=[copiar do left_panel]
+export LANGUAGE=[copiar do left_panel] 
+
+export LOCAL=[copiar do left_panel]
 
 export BIGQUERY_ROLE=[copiar do left_panel]
 
