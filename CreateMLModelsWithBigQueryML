@@ -1,0 +1,124 @@
+//Tarefa 1: crie um conjunto de dados para armazenar os modelos de machine learning
+//No Shell:
+
+bq mk austin
+
+//Tarefa 2: crie um modelo de machine learning do BigQuery de previsão
+/*Entrar no BIGQUERY e criar o modelo no campo de consultas :
+OBS. Substituir “TRAINING YEAR” e “EVALUATION YEAR” pelos exigidos no LAB.
+Os atributos desse modelo devem incorporar o nome e o endereço da estação de partida identificada como `location`, além do horário de início e dia da semana do passeio.*/
+
+CREATE OR REPLACE MODEL austin.location_model
+OPTIONS
+  (model_type='linear_reg', labels=['duration_minutes']) AS
+SELECT
+    start_station_name,
+    EXTRACT(HOUR FROM start_time) AS start_hour,
+    EXTRACT(DAYOFWEEK FROM start_time) AS day_of_week,
+    duration_minutes,
+    address as location
+
+FROM
+    `bigquery-public-data.austin_bikeshare.bikeshare_trips` AS trips
+JOIN
+    `bigquery-public-data.austin_bikeshare.bikeshare_stations` AS stations
+ON
+    trips.start_station_name = stations.name
+WHERE
+    EXTRACT(YEAR FROM start_time) = Training_Year
+    AND duration_minutes > 0
+
+//Tarefa 3: crie o segundo modelo de machine learning
+/*Os atributos desse modelo devem incorporar o nome da estação de partida, o tipo de assinante do compartilhamento de bicicletas e o horário de início do passeio.
+Substituir a consulta anterior pelo novo código ou abrir um nova guia de consultas.*/
+
+CREATE OR REPLACE MODEL austin.subscriber_model
+OPTIONS
+  (model_type='linear_reg', labels=['duration_minutes']) AS
+SELECT
+    start_station_name,
+    EXTRACT(HOUR FROM start_time) AS start_hour,
+    subscriber_type,
+    duration_minutes
+FROM `bigquery-public-data.austin_bikeshare.bikeshare_trips` AS trips
+WHERE EXTRACT(YEAR FROM start_time) = Training_Year
+
+//Tarefa 4: avalie os dois modelos de machine learning
+//Executar cada código em uma guia de consulta do Bigquery.
+//Etapa 1: Métricas (MAE e RMSE) do primeiro modelo:
+
+SELECT
+  SQRT(mean_squared_error) AS rmse,
+  mean_absolute_error
+FROM
+  ML.EVALUATE(MODEL austin.location_model, (
+  SELECT
+    start_station_name,
+    EXTRACT(HOUR FROM start_time) AS start_hour,
+    EXTRACT(DAYOFWEEK FROM start_time) AS day_of_week,
+    duration_minutes,
+	 address as location
+  FROM
+    `bigquery-public-data.austin_bikeshare.bikeshare_trips` AS trips
+  JOIN
+   `bigquery-public-data.austin_bikeshare.bikeshare_stations` AS stations
+  ON
+    trips.start_station_name = stations.name
+  WHERE EXTRACT(YEAR FROM start_time) = Evaluation_Year)
+)
+
+//Etapa 2: Métricas (MAE e RMSE) do segundo modelo:
+
+SELECT
+  SQRT(mean_squared_error) AS rmse,
+  mean_absolute_error
+FROM
+  ML.EVALUATE(MODEL austin.subscriber_model, (
+  SELECT
+    start_station_name,
+    EXTRACT(HOUR FROM start_time) AS start_hour,
+    subscriber_type,
+    duration_minutes
+  FROM
+    `bigquery-public-data.austin_bikeshare.bikeshare_trips` AS trips
+  WHERE
+    EXTRACT(YEAR FROM start_time) = Evaluation_Year)
+)
+
+//Tarefa 5: use o modelo de machine learning de tipo de assinante para prever a duração média dos passeios
+//Etapa 1: contar a quantidade de passeios para cada estações de início no ano exigido pelo lab:
+
+SELECT
+  start_station_name,
+  COUNT(*) AS trips
+FROM
+  `bigquery-public-data.austin_bikeshare.bikeshare_trips`
+WHERE
+  EXTRACT(YEAR FROM start_time) = Evaluation_Year
+GROUP BY
+  start_station_name
+ORDER BY
+  trips DESC
+  
+ //Etapa 2: prever a duração média dos passeios usando o segundo modelo:
+ 
+ SELECT AVG(predicted_duration_minutes) AS average_predicted_trip_length
+FROM ML.predict(MODEL austin.subscriber_model, (
+SELECT
+    start_station_name,
+    EXTRACT(HOUR FROM start_time) AS start_hour,
+    subscriber_type,
+    duration_minutes
+FROM
+  `bigquery-public-data.austin_bikeshare.bikeshare_trips`
+WHERE
+  EXTRACT(YEAR FROM start_time) = Evaluation_Year
+  AND subscriber_type = 'Single Trip'
+  AND start_station_name = '21st & Speedway @PCL'))
+  
+  FIM 🙂
+  
+  
+ 
+
+
